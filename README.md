@@ -54,15 +54,6 @@ API Security Design Wizard is a fully static application, making it perfect for 
 
 ---
 
-## 🔒 Security & Privacy Guarantee
-
-API Security Design Wizard is designed with zero-trust principles:
-* **No Database**: Your architectural questionnaire state is completely ephemeral and held in memory.
-* **No External API Calls**: The application executes zero network operations. Your threat answers and security document are 100% confidential and private to your machine.
-* **No Secrets**: Zero symmetric API keys, server secrets, or private credentials are coded in the application.
-
----
-
 ## 📄 License & Credits
 
 * Developed by [cyberbali](https://cyberbali.in).
