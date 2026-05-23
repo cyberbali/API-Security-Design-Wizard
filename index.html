@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Security Design Wizard</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons for Security Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Styling -->
+    <link rel="stylesheet" href="/src/style.css">
+</head>
+<body class="cyberpunk-theme">
+    <!-- Background grid & glow effects -->
+    <div class="grid-overlay"></div>
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+    <div class="glow-orb orb-3"></div>
+
+    <div class="app-wrapper">
+        <!-- HEADER -->
+        <header class="app-header animate-fade-in">
+            <div class="header-logo">
+                <i class="fa-solid fa-shield-halved logo-icon"></i>
+                <div class="logo-text">
+                    <h1>API Security Design Wizard</h1>
+                    <span>API Threat Modelling & AuthN/Z Decision Engine</span>
+                    <small class="hallmark">built by cyberbali</small>
+                </div>
+            </div>
+            <div class="header-progress">
+                <div class="progress-info">
+                    <span id="current-phase-name">Phase 1: Threat Modelling</span>
+                    <span id="progress-percentage">0%</span>
+                </div>
+                <div class="progress-bar-bg">
+                    <div id="progress-bar-fill" class="progress-bar-fill" style="width: 0%"></div>
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN LAYOUT -->
+        <main class="app-main animate-fade-in">
+            <!-- SIDEBAR: LIVE THREAT PROFILE -->
+            <aside class="app-sidebar" id="app-sidebar">
+                <div class="sidebar-header">
+                    <h3><i class="fa-solid fa-gauge-high"></i> Live Security Profile</h3>
+                </div>
+                
+                <!-- Scorecard / Threat Indicator -->
+                <div class="profile-section scorecard-section">
+                    <div class="scorecard-radial">
+                        <svg viewBox="0 0 100 100" class="radial-svg">
+                            <circle cx="50" cy="50" r="40" class="radial-bg"></circle>
+                            <circle cx="50" cy="50" r="40" class="radial-fill" id="risk-score-radial" style="stroke-dashoffset: 251.2"></circle>
+                        </svg>
+                        <div class="radial-text">
+                            <span id="risk-rating-label">MINIMAL</span>
+                            <small id="risk-score-num">0 / 10</small>
+                        </div>
+                    </div>
+                    <div class="scorecard-meta">
+                        <span>Threat Complexity Score</span>
+                    </div>
+                </div>
+
+                <!-- Callers Profile -->
+                <div class="profile-section">
+                    <span class="section-title"><i class="fa-solid fa-users"></i> System Callers</span>
+                    <ul id="sidebar-callers-list" class="sidebar-list">
+                        <li class="empty-list-placeholder">None specified yet</li>
+                    </ul>
+                </div>
+
+                <!-- Active Security Concerns -->
+                <div class="profile-section">
+                    <span class="section-title"><i class="fa-solid fa-triangle-exclamation"></i> Identified Attack Vectors</span>
+                    <ul id="sidebar-threats-list" class="sidebar-list threat-list">
+                        <li class="empty-list-placeholder">Identify attacker goals to map threats</li>
+                    </ul>
+                </div>
+
+                <!-- Regulatory & Compliance Context -->
+                <div class="profile-section">
+                    <span class="section-title"><i class="fa-solid fa-scale-balanced"></i> Constraints & Compliance</span>
+                    <div id="sidebar-compliance-list" class="compliance-tags">
+                        <span class="compliance-tag empty">No constraints</span>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- WIZARD CONTAINER -->
+            <section class="wizard-container" id="wizard-container">
+                <div class="wizard-card" id="wizard-card">
+                    <!-- Wizard Slide Content (Injected by JS) -->
+                    <div id="wizard-slide" class="wizard-slide">
+                        <!-- Content gets loaded dynamically here -->
+                    </div>
+
+                    <!-- Wizard Navigation -->
+                    <div class="wizard-footer">
+                        <button id="btn-back" class="btn btn-secondary" disabled>
+                            <i class="fa-solid fa-arrow-left"></i> Back
+                        </button>
+                        <div class="slide-indicator" id="slide-indicators">
+                            <!-- Injected bullet indicators -->
+                        </div>
+                        <button id="btn-next" class="btn btn-primary">
+                            Continue <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- DOCUMENT PREVIEW MODAL / FULL PANEL -->
+    <div id="document-overlay" class="document-overlay hidden">
+        <div class="doc-header">
+            <div class="doc-header-logo">
+                <i class="fa-solid fa-file-shield logo-icon"></i>
+                <div class="logo-text">
+                    <h2>Generated Security Architecture Design Document</h2>
+                    <span id="doc-metadata-subtitle">API Authentication & Authorization Strategy</span>
+                    <small class="hallmark">built by cyberbali</small>
+                </div>
+            </div>
+            <div class="doc-actions">
+                <button id="btn-copy-md" class="btn btn-secondary-cyber" title="Copy Markdown to Clipboard">
+                    <i class="fa-solid fa-copy"></i> Copy Markdown
+                </button>
+                <button id="btn-download-md" class="btn btn-secondary-cyber" title="Download Markdown File">
+                    <i class="fa-solid fa-download"></i> Download .md
+                </button>
+                <button id="btn-print-doc" class="btn btn-primary-cyber" title="Save as PDF or Print">
+                    <i class="fa-solid fa-print"></i> Print / PDF
+                </button>
+                <button id="btn-reset-wizard" class="btn btn-warning-cyber" title="Reset all answers and start over">
+                    <i class="fa-solid fa-rotate-left"></i> Reset Wizard
+                </button>
+                <button id="btn-close-doc" class="btn btn-danger-cyber" title="Return to Wizard">
+                    <i class="fa-solid fa-xmark"></i> Close
+                </button>
+            </div>
+        </div>
+        
+        <div class="doc-container">
+            <!-- Table of Contents Sidebar -->
+            <aside class="doc-toc" id="doc-toc">
+                <h3><i class="fa-solid fa-list-ol"></i> Document Sections</h3>
+                <ul>
+                    <li><a href="#doc-section-1" class="toc-link active">1. Executive Summary & Threat Scorecard</a></li>
+                    <li><a href="#doc-section-2" class="toc-link">2. System Threat Model</a></li>
+                    <li><a href="#doc-section-3" class="toc-link">3. Authentication (AuthN) Architecture</a></li>
+                    <li><a href="#doc-section-4" class="toc-link">4. Authorization (AuthZ) Design</a></li>
+                    <li><a href="#doc-section-5" class="toc-link">5. Cross-Cutting Concerns</a></li>
+                    <li><a href="#doc-section-6" class="toc-link">6. Implementation Code Snippets</a></li>
+                </ul>
+            </aside>
+            
+            <!-- Document Body Viewer -->
+            <article class="doc-content" id="doc-content-viewer">
+                <!-- Injected Markdown / HTML Content -->
+            </article>
+        </div>
+    </div>
+
+    <!-- Application Script -->
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>
