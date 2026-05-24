@@ -321,5 +321,74 @@ export function evaluateSecurityProfile(answers) {
         });
     }
 
+    // 6. Build Failure Modes & Resiliency Strategy (Phase 1, Q5)
+    recommendations.failureModes = [];
+    const callersList = answers.callers || [];
+
+    // All architectures have AuthZ rules that could be misconfigured
+    recommendations.failureModes.push({
+        title: 'Authorization Rule Misconfigured / BOLA',
+        blastRadius: 'Attacker bypasses resource checks, exfiltrating data belonging to other tenants or users.',
+        mitigation: 'Implement strict unit tests for access rules, automate integration tests simulating cross-tenant violations (asserting 404 responses), and enforce mandatory security linting on database repository wrappers.'
+    });
+
+    // If SPA or mobile is used, token stolen from storage is realistic
+    if ((callersList.includes('human_browser') && answers.human_client_tech === 'spa') || callersList.includes('human_mobile')) {
+        recommendations.failureModes.push({
+            title: 'Access Token Stolen from Client Local Storage',
+            blastRadius: 'Bearer credential is fully usable by the attacker until its natural expiration (exfiltration via XSS).',
+            mitigation: 'Never store access tokens in localStorage or sessionStorage. Maintain them strictly in JavaScript module-level memory, and handle sessions via HttpOnly SameSite=Strict cookies. Design access token expirations under 15 minutes.'
+        });
+    }
+
+    // If using JWTs (like SPA browser, mobile, token-forwarding, or client credentials mesh)
+    const usesJWT = (callersList.includes('human_browser') && answers.human_client_tech === 'spa') || 
+                    (callersList.includes('human_mobile')) || 
+                    (callersList.includes('machine_internal')) || 
+                    (callersList.includes('machine_thirdparty') && answers.thirdparty_bar === 'client_credentials');
+                    
+    if (usesJWT) {
+        recommendations.failureModes.push({
+            title: 'JWT Secret Key / Signing Certificate Leaked',
+            blastRadius: 'Attacker can forge any token, granting them complete, administrative access to the API.',
+            mitigation: 'Configure automated, scheduled signing key rotations via JWKS endpoints. Maintain an active, Redis-backed JTI blocklist to invalidate compromised tokens instantly.'
+        });
+    }
+
+    // If using API keys
+    if (callersList.includes('machine_thirdparty') && answers.thirdparty_bar === 'api_keys') {
+        recommendations.failureModes.push({
+            title: 'Symmetric API Key Leaked / Committed to Source Control',
+            blastRadius: 'Permanent, unauthorized impersonation of the associated third-party partner.',
+            mitigation: 'Always store API keys cryptographically hashed in your registry using SHA-256 (never in cleartext). Enforce "sk_live_" prefixes on keys to trigger automated GitHub/GitLab secret scanning blocks.'
+        });
+    }
+
+    // If using OAuth flow or client secrets
+    const usesClientSecret = (callersList.includes('human_browser') && answers.human_first_party === 'third_party') || 
+                             (callersList.includes('machine_internal') && answers.machine_security_bar === 'standard') ||
+                             (callersList.includes('machine_thirdparty') && answers.thirdparty_bar === 'client_credentials');
+
+    if (usesClientSecret) {
+        recommendations.failureModes.push({
+            title: 'OAuth Client Secret Leaked',
+            blastRadius: 'Attacker can impersonate the client application, request tokens, and perform unauthorized back-channel actions.',
+            mitigation: ' secrets must reside in secure Key Vaults (AWS Secrets Manager, HashiCorp Vault), never in code bases. Instantly revoke compromised client_ids. Upgrade to Private Key JWT assertions (client_assertion).'
+        });
+    }
+
+    // If using an IdP (OIDC, standard OAuth, Okta)
+    const usesIdP = (callersList.includes('human_browser') && answers.human_first_party === 'third_party') ||
+                    (callersList.includes('human_mobile')) ||
+                    (callersList.includes('machine_internal') && answers.machine_security_bar === 'standard');
+
+    if (usesIdP) {
+        recommendations.failureModes.push({
+            title: 'Central Identity Provider (IdP) Goes Down',
+            blastRadius: 'Single point of failure. All authentication fails and completely blocks system access.',
+            mitigation: 'Design for highly cached, local JWKS cached verification. Implement local fallback JWKS storage and configure IdP redundancy.'
+        });
+    }
+
     return recommendations;
 }

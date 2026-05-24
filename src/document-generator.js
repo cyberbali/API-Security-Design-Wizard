@@ -180,9 +180,9 @@ export function generateSecurityDocumentHTML(answers, profile) {
                  SECTION 5: CROSS-CUTTING
                  ========================================== -->
             <section id="doc-section-5">
-                <h2><i class="fa-solid fa-arrows-spin"></i> 5. Cross-Cutting Security Concerns</h2>
+                <h2><i class="fa-solid fa-arrows-spin"></i> 5. Cross-Cutting Security Concerns & Resiliency</h2>
                 
-                <h3>5.1 Token Strategy & Lifetimes</h3>
+                <h3>5.1 Token & Session Lifetimes</h3>
                 <p>${profile.crossCutting.tokenStrategy}</p>
                 
                 <table style="width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9em; text-align: left;">
@@ -199,14 +199,21 @@ export function generateSecurityDocumentHTML(answers, profile) {
                             <td style="padding: 0.5rem;">${answers.access_lifetime || '15 Minutes'}</td>
                             <td style="padding: 0.5rem;">Ephemeral, no rotation. Recalled from memory or silently refreshed.</td>
                         </tr>
-                        ${callers.includes('human_browser') || callers.includes('human_mobile') ? `
+                        ${callers.includes('human_browser') && answers.human_client_tech === 'server_rendered' ? `
+                        <tr style="border-bottom: 1px solid var(--border-color);">
+                            <td style="padding: 0.5rem;">Session Tokens</td>
+                            <td style="padding: 0.5rem;">30 Minutes (Idle) / 8 Hours (Absolute)</td>
+                            <td style="padding: 0.5rem;">Idle timeout on inactivity. Invalidate session instantly and force complete re-auth after absolute timeout.</td>
+                        </tr>
+                        ` : ''}
+                        ${(callers.includes('human_browser') && answers.human_client_tech === 'spa') || callers.includes('human_mobile') ? `
                         <tr style="border-bottom: 1px solid var(--border-color);">
                             <td style="padding: 0.5rem;">Refresh Tokens</td>
                             <td style="padding: 0.5rem;">${answers.refresh_lifetime || '7 Days'}</td>
                             <td style="padding: 0.5rem;">Rotate on every single use. Invalidate older refresh token instantly.</td>
                         </tr>
                         ` : ''}
-                        ${callers.includes('machine_thirdparty') ? `
+                        ${callers.includes('machine_thirdparty') && answers.thirdparty_bar === 'api_keys' ? `
                         <tr style="border-bottom: 1px solid var(--border-color);">
                             <td style="padding: 0.5rem;">API Keys / Machine Secrets</td>
                             <td style="padding: 0.5rem;">No technical expiry</td>
@@ -225,23 +232,23 @@ export function generateSecurityDocumentHTML(answers, profile) {
                     <ul>
                         ${profile.crossCutting.auditLogging.map(log => {
                             if (log === 'log_failures') return '<li><strong>Authentication Failures:</strong> Log all 401 Unauthorized, 403 Forbidden, and BOLA 404 blocks.</li>';
-                            if (log === 'log_mfa') return '<li><strong>Administrative Events:</strong> Log MFA challenges, credential changes, and permission alterations.</li>';
+                            if (log === 'log_mfa') return '<li><strong>Security Alterations:</strong> Log MFA challenges, credential changes, and permission alterations.</li>';
                             if (log === 'siem_feed') return '<li><strong>SIEM Integration:</strong> Stream UTC logs containing actor metadata, timestamps, client IPs, and trace IDs to central SIEM dashboards.</li>';
                         }).join('')}
                     </ul>
                 ` : '<p>No audit log strategy specified. Minimal audit logs (logging standard error rates) recommended.</p>'}
-            </section>
 
-            <div class="doc-section-break"></div>
-
-            <!-- ==========================================
-                 SECTION 6: CODE SNIPPETS
-                 ========================================== -->
-            <section id="doc-section-6">
-                <h2><i class="fa-solid fa-code"></i> 6. Technical Implementation Code Snippets</h2>
-                <p>The following standardized code snippets demonstrate the implementation of key architectural layers defined above.</p>
-
-                ${generateCodeSnippetsHTML(answers, profile)}
+                <h3>5.4 Failure Modes & Resiliency Strategy (Q5)</h3>
+                <p>Every security architecture has potential single points of failure. The following dynamic resiliency checklists and compensating controls must be engineered into production:</p>
+                <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
+                    ${profile.failureModes.map(f => `
+                        <div class="doc-callout warning" style="border-left-color: var(--state-danger); background: rgba(239, 68, 68, 0.01); margin: 0; padding: 1rem;">
+                            <h5 style="color: var(--state-danger); margin-top: 0;"><i class="fa-solid fa-triangle-exclamation"></i> Failure Mode: ${f.title}</h5>
+                            <p style="margin-bottom: 0.5rem; font-size: 0.9em;"><strong>Blast Radius / Consequence:</strong> ${f.blastRadius}</p>
+                            <p style="margin-bottom: 0; font-size: 0.9em;"><strong>Compensating Controls & Mitigations:</strong> ${f.mitigation || f.mitigationChecklist || f.mitigation}</p>
+                        </div>
+                    `).join('')}
+                </div>
             </section>
         </div>
     `;
@@ -360,11 +367,13 @@ Requests must pass sequentially through four layers:
 
 ---
 
-## 5. Cross-Cutting Concerns
+## 5. Cross-Cutting Concerns & Resiliency
 
 ### 5.1 Lifetimes Summary
 * **Access Tokens:** ${answers.access_lifetime || '15 Minutes'} (Short lifetime limits window of compromise)
-* **Refresh Tokens:** ${answers.refresh_lifetime || '7 Days'} (Must rotate refresh tokens on every single use)
+${callers.includes('human_browser') && answers.human_client_tech === 'server_rendered' ? `* **Session Tokens:** 30 Minutes Idle / 8 Hours Absolute (Idle timeout + absolute session invalidation)` : ''}
+${(callers.includes('human_browser') && answers.human_client_tech === 'spa') || callers.includes('human_mobile') ? `* **Refresh Tokens:** ${answers.refresh_lifetime || '7 Days'} (Must rotate refresh tokens on every single use)` : ''}
+${callers.includes('machine_thirdparty') && answers.thirdparty_bar === 'api_keys' ? `* **API Keys / Secrets:** No technical expiry (Enforce quarterly rotatability schedules)` : ''}
 
 ### 5.2 Revocation Strategy
 ${profile.crossCutting.revocationStrategy}
@@ -379,12 +388,14 @@ ${profile.crossCutting.auditLogging.map(log => {
 }).join('\n')}
 ` : 'Standard application logging is recommended.'}
 
----
+### 5.4 Failure Modes & Resiliency Strategy (Phase 1, Q5)
+Every authentication and authorization system has potential breaking points. The following resiliency strategies and compensating controls must be engineered into production:
 
-## 6. Technical Implementation Guidance
-
-Review the interactive tool to fetch code snippets matching this layout.
-`;
+${profile.failureModes.map(f => `
+#### Failure Mode: ${f.title}
+* **Blast Radius / Consequence:** ${f.blastRadius}
+* **Compensating Controls & Mitigations:** ${f.mitigation || f.mitigationChecklist || f.mitigation}
+`).join('\n')}`;
     return md;
 }
 
@@ -468,198 +479,4 @@ function generateSVGDiagram(answers, profile) {
         <text x="375" y="285" class="svg-text" fill="var(--text-muted)">WHERE tenant_id = :token_tenant</text>
     </svg>
     `;
-}
-
-// Generate the customized code snippets block
-function generateCodeSnippetsHTML(answers, profile) {
-    const callers = answers.callers || [];
-    const isMultiTenant = profile.authz.isMultiTenant;
-    
-    let snippets = '';
-
-    // 1. Layering Middleware Stack (NodeJS/Express Example)
-    snippets += `
-        <div class="code-container">
-            <div class="code-header">
-                <span class="code-title">middleware/layer_security.js (Node.js/Express)</span>
-                <button class="code-copy-btn" onclick="navigator.clipboard.writeText(this.closest('.code-container').querySelector('code').innerText); this.innerHTML='<i class=\\'fa-solid fa-check\\'></i> Copied!'; setTimeout(()=>this.innerHTML='Copy', 1500)">Copy</button>
-            </div>
-            <pre><code>// 1. Layer 1: Authentication Middleware
-const authenticateUser = async (req, res, next) => {
-  try {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.status(401).json({ error: 'Missing credential (AuthN failure)' });
-    
-    const verified = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = verified; // Injects { userId, tenantId, role, scopes }
-    next();
-  } catch (err) {
-    return res.status(401).json({ error: 'Invalid token (AuthN failure)' });
-  }
-};
-
-// 2. Layer 2: Coarse-Grained Authorization (Role check)
-const authorizeRole = (requiredRoles) => {
-  return (req, res, next) => {
-    if (!req.user || !requiredRoles.includes(req.user.role)) {
-      return res.status(403).json({ error: 'Forbidden: Insufficient privileges (Coarse AuthZ failure)' });
-    }
-    next();
-  };
-};
-
-// 3. Layer 3: Fine-Grained Object/Tenant Isolation (BOLA mitigation)
-const authorizeTenant = async (req, res, next) => {
-  const resourceId = req.params.id;
-  const userTenantId = req.user.tenantId; // Derived from verified token claim
-  
-  const resource = await db.fetchResourceById(resourceId);
-  
-  // Strict tenant boundary test
-  if (!resource || resource.tenantId !== userTenantId) {
-    // Return 404 NOT FOUND to avoid revealing resource existence to attackers
-    return res.status(404).json({ error: 'Resource not found' });
-  }
-  
-  req.resource = resource;
-  next();
-};
-
-// Application Route leveraging full layering stack
-app.delete('/api/findings/:id', 
-  authenticateUser, 
-  authorizeRole(['senior_analyst', 'admin']), 
-  authorizeTenant, 
-  async (req, res) => {
-    await db.deleteFinding(req.resource.id);
-    res.json({ message: 'Resource successfully deleted' });
-});</code></pre>
-        </div>
-    `;
-
-    // 2. Dynamic Caller-Specific Authentication Snippets
-    if (callers.includes('human_browser')) {
-        const clientTech = answers.human_client_tech || 'spa';
-        if (clientTech === 'server_rendered') {
-            snippets += `
-                <div class="code-container">
-                    <div class="code-header">
-                        <span class="code-title">server.js (Stateful Express Session Cookie Config)</span>
-                        <button class="code-copy-btn" onclick="navigator.clipboard.writeText(this.closest('.code-container').querySelector('code').innerText); this.innerHTML='<i class=\\'fa-solid fa-check\\'></i> Copied!'; setTimeout(()=>this.innerHTML='Copy', 1500)">Copy</button>
-                    </div>
-                    <pre><code>const session = require('express-session');
-const RedisStore = require('connect-redis')(session);
-const redisClient = require('./redis-client');
-
-app.use(session({
-  store: new RedisStore({ client: redisClient }),
-  secret: process.env.SESSION_SECRET,
-  name: 'secure_session_id', // Opaque, non-identifiable name
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    httpOnly: true,  // Prevents XSS token exfiltration
-    secure: true,    // Enforce HTTPS
-    sameSite: 'lax', // CSRF mitigation
-    maxAge: 30 * 60 * 1000 // 30 Minute idle timeout
-  }
-}));</code></pre>
-                </div>
-            `;
-        } else {
-            snippets += `
-                <div class="code-container">
-                    <div class="code-header">
-                        <span class="code-title">auth_controller.js (SPA In-Memory Access + HttpOnly Refresh Cookie)</span>
-                        <button class="code-copy-btn" onclick="navigator.clipboard.writeText(this.closest('.code-container').querySelector('code').innerText); this.innerHTML='<i class=\\'fa-solid fa-check\\'></i> Copied!'; setTimeout(()=>this.innerHTML='Copy', 1500)">Copy</button>
-                    </div>
-                    <pre><code>// Auth Controller: Login Endpoint returning memory access token + cookie refresh token
-exports.login = async (req, res) => {
-  const { username, password } = req.body;
-  const user = await db.verifyUser(username, password);
-  
-  if (!user) return res.status(401).json({ error: 'Invalid credentials' });
-  
-  const accessToken = generateAccessToken(user); // Expires in 15 mins
-  const refreshToken = generateRefreshToken(user); // Expires in 7 days
-  
-  // Refresh token is bound strictly to an HttpOnly secure cookie
-  res.cookie('secure_refresh_token', refreshToken, {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'strict',
-    path: '/api/auth/refresh', // Restricted scope path
-    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-  });
-  
-  // Return the access token to be saved in client JavaScript Memory state
-  res.json({ access_token: accessToken, expires_in: 900 });
-};</code></pre>
-                </div>
-            `;
-        }
-    }
-
-    if (callers.includes('machine_thirdparty') && answers.thirdparty_bar === 'api_keys') {
-        snippets += `
-            <div class="code-container">
-                <div class="code-header">
-                    <span class="code-title">middleware/api_key_validator.js (Opaque Custom Header Verification)</span>
-                    <button class="code-copy-btn" onclick="navigator.clipboard.writeText(this.closest('.code-container').querySelector('code').innerText); this.innerHTML='<i class=\\'fa-solid fa-check\\'></i> Copied!'; setTimeout(()=>this.innerHTML='Copy', 1500)">Copy</button>
-                </div>
-                <pre><code>const crypto = require('crypto');
-
-const validateAPIKey = async (req, res, next) => {
-  const apiKey = req.headers['x-api-key']; // Always use headers, NEVER URL parameters
-  if (!apiKey) return res.status(401).json({ error: 'Missing API Key' });
-  
-  // Safe validation check: verify standard system prefix
-  if (!apiKey.startsWith('sk_live_')) {
-    return res.status(401).json({ error: 'Malformed API Key structure' });
-  }
-
-  // Hash the incoming key to compare with the registry database
-  const hashedIncoming = crypto.createHash('sha256').update(apiKey).digest('hex');
-  const partnerRegistry = await db.findKeyByHash(hashedIncoming);
-  
-  if (!partnerRegistry) {
-    return res.status(401).json({ error: 'Invalid API Key' });
-  }
-  
-  req.partner = partnerRegistry; // { partnerId, scopes }
-  next();
-};</code></pre>
-            </div>
-        `;
-    }
-
-    // 3. Multi-Tenancy Database Scope
-    if (isMultiTenant) {
-        snippets += `
-            <div class="code-container">
-                <div class="code-header">
-                    <span class="code-title">repositories/finding_repository.js (Strict Database Tenant Scoping)</span>
-                    <button class="code-copy-btn" onclick="navigator.clipboard.writeText(this.closest('.code-container').querySelector('code').innerText); this.innerHTML='<i class=\\'fa-solid fa-check\\'></i> Copied!'; setTimeout(()=>this.innerHTML='Copy', 1500)">Copy</button>
-                </div>
-                <pre><code>// Example SQL database retrieval scoping tenant isolation
-const fetchAllFindingsForTenant = async (tenantId) => {
-  const query = 'SELECT id, title, severity, created_at FROM findings WHERE tenant_id = ?';
-  const [rows] = await dbPool.execute(query, [tenantId]); // Strictly parameterized, no manual concatenation
-  return rows;
-};
-
-// Example Node ORM (Prisma) scoped retrieval
-const fetchFindingPrisma = async (id, tenantId) => {
-  return await prisma.finding.findFirst({
-    where: {
-      id: id,
-      tenantId: tenantId // Tenant check is non-negotiable on every single lookup
-    }
-  });
-};</code></pre>
-            </div>
-        `;
-    }
-
-    return snippets;
 }

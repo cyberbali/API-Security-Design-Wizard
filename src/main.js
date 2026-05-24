@@ -31,6 +31,7 @@ const slideIndicators = document.getElementById('slide-indicators');
 const currentPhaseNameEl = document.getElementById('current-phase-name');
 const progressBarFill = document.getElementById('progress-bar-fill');
 const progressPercentageEl = document.getElementById('progress-percentage');
+const wizardFooter = document.querySelector('.wizard-footer');
 
 // Sidebar DOM Elements
 const sidebarCallersList = document.getElementById('sidebar-callers-list');
@@ -96,9 +97,91 @@ function resetWizard() {
     closeDocument();
 }
 
+function loadTemplate(exampleIndex, skipToReport = false) {
+    const template1 = {
+        callers: ['human_browser', 'machine_internal', 'machine_thirdparty'],
+        protection_level: 'sensitive',
+        attacker_goals: ['impersonate_user', 'escalate_privilege', 'pivot_system'],
+        can_hold_secret: 'yes',
+        browser_available: 'yes',
+        verifiers_count: 'many',
+        regulatory_context: 'soc2',
+        immediate_revocation: 'yes',
+        human_first_party: 'first_party',
+        human_client_tech: 'spa',
+        human_mfa_requirement: ['admin_ops', 'step_up'],
+        machine_context: 'service_identity',
+        machine_security_bar: 'standard',
+        thirdparty_bar: 'api_keys',
+        authz_dimensions: ['role', 'tenant', 'sensitivity'],
+        is_multitenant: 'yes',
+        function_protection: 'yes',
+        access_lifetime: '15m',
+        refresh_lifetime: '7d',
+        audit_logging: ['log_failures', 'log_mfa', 'siem_feed']
+    };
+
+    const template2 = {
+        callers: ['machine_thirdparty'],
+        protection_level: 'sensitive',
+        attacker_goals: ['impersonate_app', 'abuse_scale', 'escalate_privilege'],
+        can_hold_secret: 'no',
+        browser_available: 'no',
+        verifiers_count: 'one',
+        regulatory_context: 'none',
+        immediate_revocation: 'yes',
+        thirdparty_bar: 'client_credentials',
+        authz_dimensions: ['role', 'tenant'],
+        is_multitenant: 'yes',
+        function_protection: 'no',
+        access_lifetime: '1h',
+        refresh_lifetime: '7d',
+        audit_logging: ['log_failures']
+    };
+
+    const template3 = {
+        callers: ['machine_internal'],
+        protection_level: 'critical',
+        attacker_goals: ['pivot_system'],
+        can_hold_secret: 'yes',
+        browser_available: 'no',
+        verifiers_count: 'many',
+        regulatory_context: 'none',
+        immediate_revocation: 'no',
+        machine_context: 'service_identity',
+        machine_security_bar: 'high_assurance',
+        authz_dimensions: ['role', 'attribute'],
+        is_multitenant: 'no',
+        function_protection: 'yes',
+        access_lifetime: '1h',
+        refresh_lifetime: '7d',
+        audit_logging: ['log_failures', 'siem_feed']
+    };
+
+    const selectedTemplate = exampleIndex === 1 ? template1 : (exampleIndex === 2 ? template2 : template3);
+    
+    // Clear and merge template data into answers
+    answers = { ...answers, ...selectedTemplate };
+    
+    // Rebuild wizard slides
+    updateWizardSteps();
+    updateSidebar();
+
+    if (skipToReport) {
+        generateAndShowDocument();
+    } else {
+        // Go to the first active question slide (index 1)
+        currentStepIndex = 1;
+        renderSlide();
+    }
+}
+
 // Compute the list of wizard steps dynamically based on current answers
 function updateWizardSteps() {
     const steps = [];
+    
+    // Welcome Step
+    steps.push(questions.find(q => q.id === 'welcome'));
     
     // Phase 1: Threat Modelling (All base questions)
     steps.push(questions.find(q => q.id === 'callers'));
@@ -171,8 +254,71 @@ function renderSlide() {
         </div>
     `;
 
+    // Render Welcome Screen
+    if (q.type === 'welcome') {
+        wizardFooter.style.display = 'none';
+        html += `
+            <div class="welcome-container animate-fade-in">
+                <div class="welcome-banner">
+                    <i class="fa-solid fa-shield-halved welcome-banner-icon"></i>
+                    <h3>Welcome to the Security Design Framework</h3>
+                    <p>API Security Design Wizard guides you through 5 security phases to define threat parameters, select authentication mechanisms, map access control dimensions, configure lifetimes, and analyze failure modes to compile a complete corporate design document.</p>
+                </div>
+                
+                <div class="templates-section">
+                    <h4>💡 Quick Pre-Populate Templates</h4>
+                    <p class="templates-subtitle">Accelerate design documentation by loading standard threat worked examples from the reference framework:</p>
+                    
+                    <div class="templates-grid">
+                        <div class="template-card">
+                            <div class="template-card-header">
+                                <i class="fa-solid fa-server template-icon"></i>
+                                <h5>Example 1: Internal SecOps API</h5>
+                            </div>
+                            <p>SOC analysts (Browser SPA), internal SIEM systems (Machine symmetrics), and partner MSSP integrations (Opaque custom API keys). Multi-tenant isolation with custom RBAC scoping.</p>
+                            <div class="template-actions">
+                                <button class="btn-template btn-load-walk" data-example="1">Load & Walk Quiz</button>
+                                <button class="btn-template btn-load-skip" data-example="1">Instant Report ⚡</button>
+                            </div>
+                        </div>
+
+                        <div class="template-card">
+                            <div class="template-card-header">
+                                <i class="fa-solid fa-globe template-icon"></i>
+                                <h5>Example 2: Public SaaS Developer API</h5>
+                            </div>
+                            <p>External developers and CI/CD pipelines accessing public integrations using symmetric client secrets. Scope-based operational controls combined with Tenant boundaries.</p>
+                            <div class="template-actions">
+                                <button class="btn-template btn-load-walk" data-example="2">Load & Walk Quiz</button>
+                                <button class="btn-template btn-load-skip" data-example="2">Instant Report ⚡</button>
+                            </div>
+                        </div>
+
+                        <div class="template-card">
+                            <div class="template-card-header">
+                                <i class="fa-solid fa-network-wired template-icon"></i>
+                                <h5>Example 3: Microservice Mesh</h5>
+                            </div>
+                            <p>Pure internal service-to-service cluster (12 microservices). Zero human auth interfaces. High-assurance transport authentication via Istio mTLS and SPIFFE/SPIRE certificates.</p>
+                            <div class="template-actions">
+                                <button class="btn-template btn-load-walk" data-example="3">Load & Walk Quiz</button>
+                                <button class="btn-template btn-load-skip" data-example="3">Instant Report ⚡</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="start-actions">
+                    <button id="btn-start-blank" class="btn btn-primary" style="margin: 2rem auto 0 auto; padding: 0.8rem 2.5rem; font-size: 1.05rem;">
+                        Start Blank Security Quiz <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }
     // Render Choice Grid
-    if (q.type === 'checkbox' || q.type === 'radio') {
+    else if (q.type === 'checkbox' || q.type === 'radio') {
+        wizardFooter.style.display = 'flex';
         html += `<div class="options-grid">`;
         q.options.forEach(opt => {
             const isSelected = isOptionSelected(q.id, opt.value);
@@ -211,6 +357,7 @@ function renderSlide() {
     } 
     // Render Select lists (Multi Question layouts)
     else if (q.type === 'multi_question') {
+        wizardFooter.style.display = 'flex';
         html += `<div style="display: flex; flex-direction: column; gap: 1.2rem;">`;
         q.questions.forEach(subQ => {
             const currentVal = answers[subQ.id] || '';
@@ -230,17 +377,42 @@ function renderSlide() {
     // Set layout content
     wizardSlideContainer.innerHTML = html;
 
-    // Attach interaction event listeners to new cards
-    const cards = wizardSlideContainer.querySelectorAll('.option-card');
-    cards.forEach(card => {
-        card.addEventListener('click', handleOptionSelect);
-    });
+    // Attach event listeners for welcome page specifically
+    if (q.type === 'welcome') {
+        const btnStartBlank = wizardSlideContainer.querySelector('#btn-start-blank');
+        btnStartBlank.addEventListener('click', () => {
+            currentStepIndex = 1;
+            renderSlide();
+        });
 
-    // Attach select element event listeners
-    const selects = wizardSlideContainer.querySelectorAll('.cyber-select');
-    selects.forEach(sel => {
-        sel.addEventListener('change', handleSelectChange);
-    });
+        const btnWalks = wizardSlideContainer.querySelectorAll('.btn-load-walk');
+        btnWalks.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const ex = parseInt(e.currentTarget.dataset.example);
+                loadTemplate(ex, false);
+            });
+        });
+
+        const btnSkips = wizardSlideContainer.querySelectorAll('.btn-load-skip');
+        btnSkips.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const ex = parseInt(e.currentTarget.dataset.example);
+                loadTemplate(ex, true);
+            });
+        });
+    } else {
+        // Attach interaction event listeners to new cards
+        const cards = wizardSlideContainer.querySelectorAll('.option-card');
+        cards.forEach(card => {
+            card.addEventListener('click', handleOptionSelect);
+        });
+
+        // Attach select element event listeners
+        const selects = wizardSlideContainer.querySelectorAll('.cyber-select');
+        selects.forEach(sel => {
+            sel.addEventListener('change', handleSelectChange);
+        });
+    }
 
     // Update navigation button status
     btnBack.disabled = (currentStepIndex === 0);

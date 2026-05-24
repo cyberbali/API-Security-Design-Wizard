@@ -8,6 +8,13 @@ export const phases = [
 ];
 
 export const questions = [
+    {
+        id: 'welcome',
+        phase: 'threat-model',
+        title: 'API Security Design Wizard',
+        subtitle: 'Configure your security context, walk the decision trees, and generate a customized Security Architecture Design Document.',
+        type: 'welcome'
+    },
     // ==========================================
     // PHASE 1: THREAT MODELLING QUESTIONS
     // ==========================================

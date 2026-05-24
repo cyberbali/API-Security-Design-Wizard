@@ -4,7 +4,7 @@
 
 API Security Design Wizard is a standalone, client-side interactive web application designed to guide software architects, developers, and security engineers through a structured, phased threat modelling and authentication/authorization decision tree framework. 
 
-By answering a series of environmental and business questions, API Security Design Wizard dynamically computes threat complexity scores, evaluates caller-specific decision trees, maps appropriate access control dimensions, and generates a comprehensive, print-ready **Security Architecture Design Document** containing targeted mitigations and robust code templates.
+By answering a series of environmental and business questions, API Security Design Wizard dynamically computes threat complexity scores, evaluates caller-specific decision trees, maps appropriate access control dimensions, and generates a comprehensive, print-ready **Security Architecture Design Document** containing targeted mitigations and robust architectural specifications.
 
 ---
 
@@ -14,7 +14,6 @@ By answering a series of environmental and business questions, API Security Desi
 * **Mixed Caller Multi-Branch Walking**: Real-world APIs support multiple calling interfaces. If you select multiple caller types (e.g. Browser + Machine-to-Machine), the engine dynamically routes you through the AuthN decision tree *once per caller*, consolidating custom recommendations.
 * **100% Client-Side & Private**: All state processing, questionnaire evaluation, SVG generation, and document compile flows run entirely inside the user's browser. **No data is sent to external servers, no databases are required, and no trackers or secrets are embedded.**
 * **Dynamic Middlewares Flowchart**: Renders a custom vector-based SVG Request Flow diagram showing how Layer 1 (AuthN), Layer 2 (Coarse AuthZ), and Layer 3 (Fine AuthZ) interface before querying scoped database data.
-* **Production-Ready Code Snippets**: Generates highly context-specific boilerplates (e.g. Prisma multi-tenancy filter scopes, stateful Express session configs, SHA-256 opaque key custom header validators, and unified middleware layering wrappers).
 * **Robust Document Exports**: Copy raw Markdown with one-click, download it as a `.md` file, or print/save as a beautifully formatted PDF using custom print-specific CSS stylesheets.
 
 ---
