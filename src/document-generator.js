@@ -1,8 +1,18 @@
 // Module responsible for generating the Markdown and HTML design documents.
 
+const complianceMap = {
+    'none': 'No Specific Compliance',
+    'soc2': 'SOC 2 / ISO 27001',
+    'hipaa': 'HIPAA / FedRAMP',
+    'psd2': 'PSD2 / Open Banking',
+    'pci_dss': 'PCI-DSS (Payment Card Industry)',
+    'isa_62443': 'ISA 62443 / IEC 62443 (Industrial OT)'
+};
+
 export function generateSecurityDocumentHTML(answers, profile) {
     const callers = answers.callers || [];
-    const compliance = profile.crossCutting.complianceRequirements.toUpperCase();
+    const complianceKey = profile.crossCutting.complianceRequirements || 'none';
+    const compliance = complianceKey.split(', ').map(k => complianceMap[k] || k.toUpperCase()).join(', ');
     const hasAuditLogs = profile.crossCutting.auditLogging && profile.crossCutting.auditLogging.length > 0;
     
     // Generate the SVG Architecture Diagram dynamically
@@ -259,7 +269,8 @@ export function generateSecurityDocumentHTML(answers, profile) {
 // Generate the customized raw Markdown document
 export function generateSecurityDocumentMarkdown(answers, profile) {
     const callers = answers.callers || [];
-    const compliance = profile.crossCutting.complianceRequirements.toUpperCase();
+    const complianceKey = profile.crossCutting.complianceRequirements || 'none';
+    const compliance = complianceKey.split(', ').map(k => complianceMap[k] || k.toUpperCase()).join(', ');
     
     let md = `# Security Architecture Design Document
 

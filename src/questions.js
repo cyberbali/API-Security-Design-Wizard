@@ -179,17 +179,6 @@ export const questions = [
                 ]
             },
             {
-                id: 'regulatory_context',
-                label: 'What is the regulatory context?',
-                type: 'select',
-                options: [
-                    { value: 'none', label: 'Standard Web Application (No specific compliance)' },
-                    { value: 'soc2', label: 'SOC 2 / ISO 27001 (Auditable access logs, MFA, rotation)' },
-                    { value: 'hipaa', label: 'HIPAA / FedRAMP (High security, strict session lifetimes, MFA)' },
-                    { value: 'psd2', label: 'PSD2 / Open Banking (Strong Customer Auth, high assurance)' }
-                ]
-            },
-            {
                 id: 'immediate_revocation',
                 label: 'Is immediate real-time credential revocation required?',
                 type: 'select',
@@ -197,6 +186,51 @@ export const questions = [
                     { value: 'no', label: 'No (Can wait up to 1 hour for access tokens to expire naturally)' },
                     { value: 'yes', label: 'Yes (Must be able to instantly revoke a session/token)' }
                 ]
+            }
+        ]
+    },
+    {
+        id: 'regulatory_context',
+        phase: 'threat-model',
+        title: 'Regulatory & Compliance Context',
+        subtitle: 'Select the compliance frameworks governing your system to map mandatory controls and audit targets.',
+        type: 'checkbox',
+        options: [
+            {
+                value: 'none',
+                label: 'No Specific Compliance',
+                icon: 'fa-globe',
+                desc: 'Standard security guidelines. Suitable for general-purpose web APIs without strict regulatory audits.'
+            },
+            {
+                value: 'soc2',
+                label: 'SOC 2 / ISO 27001',
+                icon: 'fa-certificate',
+                desc: 'Enforces auditable access logging, multi-factor authentication (MFA) policies, and regular credential rotation.'
+            },
+            {
+                value: 'hipaa',
+                label: 'HIPAA / FedRAMP',
+                icon: 'fa-file-shield',
+                desc: 'Requires high-security tenant isolation, strict session timeouts, detailed UTC audit trails, and mandatory MFA.'
+            },
+            {
+                value: 'psd2',
+                label: 'PSD2 / Open Banking',
+                icon: 'fa-building-columns',
+                desc: 'Demands Strong Customer Authentication (SCA), transaction-level step-up auth, and high assurance validation (mTLS).'
+            },
+            {
+                value: 'pci_dss',
+                label: 'PCI-DSS (Payment Cards)',
+                icon: 'fa-credit-card',
+                desc: 'Mandates cardholder data tokenization, PAN masking, TLS 1.3 encryption, and robust MFA for payment networks.'
+            },
+            {
+                value: 'isa_62443',
+                label: 'ISA 62443 (Industrial OT)',
+                icon: 'fa-industry',
+                desc: 'Industrial Automation and Control Systems. Focuses on conduit zone isolation, mTLS, and zero human interfaces.'
             }
         ]
     }

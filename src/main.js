@@ -10,11 +10,11 @@ let answers = {
     authz_dimensions: [],
     audit_logging: [],
     human_mfa_requirement: [],
+    regulatory_context: [],
     // Set default values for multi-questions
     can_hold_secret: 'yes',
     browser_available: 'yes',
     verifiers_count: 'one',
-    regulatory_context: 'none',
     immediate_revocation: 'no',
     access_lifetime: '15m',
     refresh_lifetime: '7d'
@@ -82,10 +82,10 @@ function resetWizard() {
         authz_dimensions: [],
         audit_logging: [],
         human_mfa_requirement: [],
+        regulatory_context: [],
         can_hold_secret: 'yes',
         browser_available: 'yes',
         verifiers_count: 'one',
-        regulatory_context: 'none',
         immediate_revocation: 'no',
         access_lifetime: '15m',
         refresh_lifetime: '7d'
@@ -105,7 +105,7 @@ function loadTemplate(exampleIndex, skipToReport = false) {
         can_hold_secret: 'yes',
         browser_available: 'yes',
         verifiers_count: 'many',
-        regulatory_context: 'soc2',
+        regulatory_context: ['soc2'],
         immediate_revocation: 'yes',
         human_first_party: 'first_party',
         human_client_tech: 'spa',
@@ -128,7 +128,7 @@ function loadTemplate(exampleIndex, skipToReport = false) {
         can_hold_secret: 'no',
         browser_available: 'no',
         verifiers_count: 'one',
-        regulatory_context: 'none',
+        regulatory_context: [],
         immediate_revocation: 'yes',
         thirdparty_bar: 'client_credentials',
         authz_dimensions: ['role', 'tenant'],
@@ -146,7 +146,7 @@ function loadTemplate(exampleIndex, skipToReport = false) {
         can_hold_secret: 'yes',
         browser_available: 'no',
         verifiers_count: 'many',
-        regulatory_context: 'none',
+        regulatory_context: [],
         immediate_revocation: 'no',
         machine_context: 'service_identity',
         machine_security_bar: 'high_assurance',
@@ -188,6 +188,7 @@ function updateWizardSteps() {
     steps.push(questions.find(q => q.id === 'protection_level'));
     steps.push(questions.find(q => q.id === 'attacker_goals'));
     steps.push(questions.find(q => q.id === 'operational_env'));
+    steps.push(questions.find(q => q.id === 'regulatory_context'));
     
     // Phase 2: AuthN (Dynamic branches based on caller types)
     const callers = answers.callers || [];
@@ -457,7 +458,21 @@ function handleOptionSelect(e) {
             answers[qid].splice(index, 1);
             card.classList.remove('selected');
         } else {
-            answers[qid].push(val);
+            // Exclusive "none" option logic for checkboxes (e.g. regulatory_context)
+            if (val === 'none') {
+                answers[qid] = ['none'];
+                wizardSlideContainer.querySelectorAll('.option-card').forEach(c => {
+                    if (c.dataset.val !== 'none') c.classList.remove('selected');
+                });
+            } else {
+                const noneIdx = answers[qid].indexOf('none');
+                if (noneIdx > -1) {
+                    answers[qid].splice(noneIdx, 1);
+                    const noneCard = wizardSlideContainer.querySelector('.option-card[data-val="none"]');
+                    if (noneCard) noneCard.classList.remove('selected');
+                }
+                answers[qid].push(val);
+            }
             card.classList.add('selected');
         }
     } else {
@@ -585,9 +600,13 @@ function updateSidebar() {
     }
 
     // 4. Render compliance tag
-    const reg = answers.regulatory_context || 'none';
-    if (reg !== 'none') {
-        sidebarComplianceList.innerHTML = `<span class="compliance-tag">${reg.toUpperCase()} COMPLIANT</span>`;
+    const regs = answers.regulatory_context || [];
+    const regsArray = Array.isArray(regs) ? regs : [regs];
+    const activeRegs = regsArray.filter(r => r !== 'none');
+    if (activeRegs.length > 0) {
+        sidebarComplianceList.innerHTML = activeRegs.map(r => 
+            `<span class="compliance-tag">${r.replace('_', '-').toUpperCase()} COMPLIANT</span>`
+        ).join('');
     } else {
         sidebarComplianceList.innerHTML = '<span class="compliance-tag empty">No constraints</span>';
     }

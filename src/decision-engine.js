@@ -248,7 +248,13 @@ export function evaluateSecurityProfile(answers) {
     recommendations.crossCutting = {
         tokenStrategy,
         revocationStrategy,
-        complianceRequirements: answers.regulatory_context || 'none',
+        complianceRequirements: (() => {
+            const ctx = answers.regulatory_context;
+            if (Array.isArray(ctx)) {
+                return ctx.length > 0 ? ctx.join(', ') : 'none';
+            }
+            return ctx || 'none';
+        })(),
         auditLogging: answers.audit_logging || []
     };
 
